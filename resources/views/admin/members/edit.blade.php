@@ -1,0 +1,157 @@
+<x-admin-layout title="Edit Member">
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form class="row" action="{{ route('admin.members.update', $member) }}" method="POST" 
+                  enctype="multipart/form-data"
+                  onsubmit="return confirm('Anda yakin ingin mengedit member ini?')">
+                @csrf
+                @method('PUT')
+
+                {{-- Photo Section --}}
+                <div class="col-12 mb-4">
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <img id="photoPreview" 
+                                 src="{{ $member->photo ? asset('storage/' . $member->photo) : asset('storage/placeholder.png') }}" 
+                                 alt="{{ $member->name }}" 
+                                 class="rounded-circle"
+                                 style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #1cc88a;">
+                        </div>
+                        
+                        <label for="photo" class="btn btn-success btn-sm">
+                            <i class="fas fa-camera mr-1"></i> Ganti Foto
+                        </label>
+                        <input type="file" 
+                               name="photo" 
+                               id="photo" 
+                               class="d-none" 
+                               accept="image/jpeg,image/png,image/jpg"
+                               onchange="previewPhoto(this)">
+                        
+                        @if($member->photo)
+                            <div class="form-check mt-3 d-inline-block">
+                                <input class="form-check-input" type="checkbox" name="delete_photo" id="delete_photo" value="1">
+                                <label class="form-check-label text-danger" for="delete_photo">
+                                    <i class="fas fa-trash mr-1"></i> Hapus foto
+                                </label>
+                            </div>
+                        @endif
+                        
+                        <small class="d-block text-muted mt-2">JPG, PNG (Max: 2MB)</small>
+                        @error('photo')
+                            <small class="text-danger d-block mt-1">{{ $message }}</small>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label for="name" class="form-label">Nama</label>
+                    <input type="text" name="name" class="form-control" id="name" value="{{ old('name', $member->name) }}">
+                    @error('name')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="number_type" class="form-label">Tipe Nomor</label>
+                    <select name="number_type" id="number_type" class="form-control">
+                        @foreach (\App\Models\User::NUMBER_TYPES as $numberType)
+                            <option @selected(old('number_type', $member->number_type) === $numberType) value="{{ $numberType }}">{{ $numberType }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('number_type')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="number" class="form-label">Nomor</label>
+                    <input type="number" name="number" class="form-control" id="number"
+                        value="{{ old('number', $member->number) }}">
+                    @error('number')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label for="address" class="form-label">Alamat</label>
+                    <input type="text" name="address" class="form-control" id="address"
+                        value="{{ old('address', $member->address) }}">
+                    @error('address')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="telephone" class="form-label">Telepon <small class="ml-1">(contoh:
+                            6281234567890)</small></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="telephoneLabel">+</span>
+                        </div>
+                        <input type="number" name="telephone" id="telephone" class="form-control"
+                            aria-label="Telephone" aria-describedby="telephoneLabel" value="{{ old('telephone', $member->telephone) }}">
+                    </div>
+                    @error('telephone')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label mb-3">Jenis Kelamin</label>
+                    <br />
+                    @foreach (\App\Models\User::GENDERS as $gender)
+                        <div class="form-check form-check-inline">
+                            <input @checked(old('gender', $member->gender) === $gender) class="form-check-input" type="radio" name="gender"
+                                id="{{ $gender }}" value="{{ $gender }}">
+                            <label class="form-check-label" for="{{ $gender }}">{{ $gender }}</label>
+                        </div>
+                    @endforeach
+                    <br />
+                    @error('gender')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 mb-3">
+                    <hr>
+                    <h6 class="text-muted">Ganti Password (Opsional)</h6>
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="password" class="form-label">Password Baru</label>
+                    <input type="password" name="password" class="form-control" id="password">
+                    <small class="text-muted">Kosongkan jika tidak ingin mengganti password</small>
+                    @error('password')
+                        <span class="text-danger d-block">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+                    <input type="password" name="password_confirmation" class="form-control" id="password_confirmation">
+                </div>
+
+                <div class="d-flex w-100 mt-3 justify-content-end">
+                    <a href="{{ route('admin.members.index') }}" class="btn btn-warning mx-3">Kembali</a>
+                    <button type="submit" class="btn btn-success mx-3">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @section('scripts')
+    <script>
+        function previewPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+    @endsection
+</x-admin-layout>
