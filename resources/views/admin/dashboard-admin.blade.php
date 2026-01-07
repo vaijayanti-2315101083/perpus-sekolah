@@ -313,6 +313,76 @@
         </div>
     </div>
 
+    {{-- Charts Section Row 1 --}}
+    <div class="row mb-4">
+        {{-- Bar Chart: Monthly Transactions --}}
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-bar"></i> Transaksi Peminjaman per Bulan ({{ now()->year }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Pie Chart: Book Categories --}}
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-pie"></i> Distribusi Kategori Buku
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2" style="height: 250px;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Charts Section Row 2 --}}
+    <div class="row mb-4">
+        {{-- Line Chart: Monthly Fines --}}
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-chart-line"></i> Tren Pendapatan Denda per Bulan ({{ now()->year }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="finesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Pie Chart: Return Status --}}
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-pie"></i> Status Pengembalian
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2" style="height: 250px;">
+                        <canvas id="returnStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Recent Activities --}}
     <div class="row">
         <div class="col-xl-6 mb-4">
@@ -389,4 +459,165 @@
             </div>
         </div>
     </div>
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Monthly Transactions Bar Chart
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx) {
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: @json($chart_months),
+                datasets: [{
+                    label: 'Jumlah Peminjaman',
+                    data: @json($chart_monthly_data),
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Category Doughnut Chart
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx) {
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @json($chart_categories),
+                datasets: [{
+                    data: @json($chart_category_data),
+                    backgroundColor: [
+                        '#4e73df', '#1cc88a', '#36b9cc', 
+                        '#f6c23e', '#e74a3b', '#858796'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    // Monthly Fines Line Chart
+    const finesCtx = document.getElementById('finesChart');
+    if (finesCtx) {
+        new Chart(finesCtx, {
+            type: 'line',
+            data: {
+                labels: @json($chart_monthly_fines['labels']),
+                datasets: [{
+                    label: 'Pendapatan Denda (Rp)',
+                    data: @json($chart_monthly_fines['data']),
+                    borderColor: '#1cc88a',
+                    backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#1cc88a',
+                    pointBorderColor: '#fff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Rp ' + context.raw.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + value.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Return Status Pie Chart
+    const returnStatusCtx = document.getElementById('returnStatusChart');
+    if (returnStatusCtx) {
+        new Chart(returnStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: @json($chart_return_status['labels']),
+                datasets: [{
+                    data: @json($chart_return_status['data']),
+                    backgroundColor: [
+                        '#f6c23e', // Belum Dikonfirmasi (warning)
+                        '#e74a3b', // Terlambat (danger)
+                        '#5a5c69', // Denda Belum Dibayar (dark)
+                        '#1cc88a', // Dikembalikan (success)
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+@endsection
 </x-admin-layout>

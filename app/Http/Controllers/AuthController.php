@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,9 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        // Log registration
+        ActivityLog::log('create', "User baru mendaftar: {$user->name} ({$user->number_type}: {$user->number})", $user);
+
         return redirect()->route('home');
     }
 
@@ -42,6 +46,10 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
+            // Log login
+            $user = Auth::user();
+            ActivityLog::log('login', "User login: {$user->name} ({$user->role})", $user);
+
             return redirect()->intended(route('home'));
         }
 
@@ -50,7 +58,13 @@ class AuthController extends Controller
         ])->onlyInput('number');
     }
 
-    public function logout(Request $request) {
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Log logout before actually logging out
+        ActivityLog::log('logout', "User logout: {$user->name} ({$user->role})", $user);
+
         Auth::logout();
 
         $request->session()->invalidate();

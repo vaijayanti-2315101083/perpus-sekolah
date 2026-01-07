@@ -22,6 +22,7 @@ return new class extends Migration
             $table->foreignId('book_id')->constrained('books')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('borrow_id')->unique()->constrained('borrows')->cascadeOnDelete();
+            $table->timestamps();
         });
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Book;
 use App\Models\Borrow;
 use App\Models\Restore;
@@ -61,7 +62,7 @@ class MyBookController extends Controller
             'amount' => ['required', 'numeric', 'max:' . $book->amount],
         ]);
 
-        Borrow::create([
+        $borrow = Borrow::create([
             'borrowed_at' => now(),
             'duration' => $request->duration,
             'amount' => $request->amount,
@@ -69,6 +70,9 @@ class MyBookController extends Controller
             'book_id' => $book->id,
             'user_id' => auth()->id(),
         ]);
+
+        // Log activity
+        ActivityLog::log('create', "Mengajukan peminjaman buku '{$book->title}' (jumlah: {$request->amount}, durasi: {$request->duration} hari)", $borrow);
 
         return redirect()->route('my-books.index')->with('success', 'Berhasil mengajukan peminjaman!');
     }
@@ -83,7 +87,7 @@ class MyBookController extends Controller
             return redirect(dashboard_route());
         }
 
-        $borrow = Borrow::query()->findOrFail($id);
+        $borrow = Borrow::query()->with('book')->findOrFail($id);
 
         if (!$borrow->confirmation || isset($borrow->restore)) {
             return back()->withErrors(['default' => 'Peminjaman ini tidak sesuai!']);
@@ -93,7 +97,7 @@ class MyBookController extends Controller
             ? Restore::STATUSES['Not confirmed'] 
             : Restore::STATUSES['Past due'];
 
-        Restore::create([
+        $restore = Restore::create([
             'returned_at' => now(),
             'status' => $returnStatus,
             'confirmation' => 0,
@@ -101,6 +105,10 @@ class MyBookController extends Controller
             'user_id' => auth()->id(),
             'borrow_id' => $borrow->id,
         ]);
+
+        // Log activity
+        $statusLabel = $returnStatus === Restore::STATUSES['Past due'] ? ' (terlambat)' : '';
+        ActivityLog::log('create', "Mengajukan pengembalian buku '{$borrow->book->title}'{$statusLabel}", $restore);
 
         return redirect()->route('my-books.index')->with('success', 'Berhasil mengajukan pengembalian!');
     }

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('confirmation');
             $table->foreignId('book_id')->constrained('books')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->timestamps();
         });
     }
 

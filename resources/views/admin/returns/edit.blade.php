@@ -26,7 +26,7 @@
                 <div class="col-12 col-md-4 mb-3">
                     <label for="name" class="form-label">Jumlah Pinjam</label>
                     <input type="text" name="amount" class="form-control" id="amount"
-                        value="{{ $restore->borrow->amount . ' hari' }}" disabled>
+                        value="{{ ($restore->borrow?->amount ?? 0) . ' hari' }}" disabled>
                 </div>
 
                 <div class="col-12 col-md-4 mb-3">
@@ -38,13 +38,13 @@
                 <div class="col-12 col-md-6 mb-3">
                     <label for="status" class="form-label">Status</label>
                     <input type="text" name="status" class="form-control" id="status"
-                        value="{{ $restore->status }}" disabled>
+                        value="{{ $restore->status_label }}" disabled>
                 </div>
 
                 <div class="col-12 col-md-6 mb-3">
                     <label for="fine" class="form-label">Denda</label>
                     <input type="number" name="fine" class="form-control" id="fine"
-                        value="{{ $restore->fine ?? '' }}" @disabled(isset($restore->fine) || $restore->returned_at < $restore->borrow->borrowed_at->addDays($restore->borrow->duration))>
+                        value="{{ $restore->fine ?? '' }}" @disabled(isset($restore->fine) || ($restore->borrow && $restore->returned_at < $restore->borrow->borrowed_at->addDays($restore->borrow->duration)))>
                     @error('fine')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror

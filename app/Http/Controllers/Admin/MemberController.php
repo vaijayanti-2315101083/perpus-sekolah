@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class MemberController extends Controller
 {
+    use LogsActivity;
+
     public function index(Request $request)
     {
         $members = User::query()
@@ -48,7 +51,7 @@ class MemberController extends Controller
             'telephone' => ['required', 'numeric'],
             'gender' => ['required', Rule::in(User::GENDERS)],
             'password' => ['required', 'string', 'confirmed', 'max:255'],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], // ✅ NEW!
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         $credentials['role'] = User::ROLES['Member'];
@@ -56,12 +59,15 @@ class MemberController extends Controller
         $password = $credentials['password'];
         $credentials['password'] = Hash::make($password);
 
-        // ✅ Handle photo upload
+        // Handle photo upload
         if ($request->hasFile('photo')) {
             $credentials['photo'] = $request->file('photo')->store('profile-photos', 'public');
         }
 
-        User::create($credentials);
+        $member = User::create($credentials);
+
+        // Log activity
+        $this->logCreate($member, "Menambahkan member baru: {$member->name} ({$member->number_type}: {$member->number})");
 
         return redirect()
             ->route('admin.members.index')
@@ -90,6 +96,8 @@ class MemberController extends Controller
             ->where('role', User::ROLES['Member'])
             ->findOrFail($id);
 
+        $oldValues = $member->toArray();
+
         $credentials = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'number_type' => ['required', Rule::in(User::NUMBER_TYPES)],
@@ -97,15 +105,15 @@ class MemberController extends Controller
             'address' => ['required', 'string', 'max:255'],
             'telephone' => ['required', 'numeric'],
             'gender' => ['required', Rule::in(User::GENDERS)],
-            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], // ✅ NEW!
-            'delete_photo' => ['nullable', 'boolean'], // ✅ NEW! For delete photo checkbox
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'delete_photo' => ['nullable', 'boolean'],
         ]);
 
         $credentials['role'] = User::ROLES['Member'];
 
         $successMessage = "Berhasil mengedit member. <br /> Nomor: {$credentials['number']}";
 
-        // ✅ Handle password update
+        // Handle password update
         if (isset($request->password)) {
             $newPassword = $request->validate([
                 'password' => ['required', 'string', 'confirmed', 'max:255'],
@@ -115,15 +123,14 @@ class MemberController extends Controller
             $successMessage .= " <br /> Password Baru: {$newPassword}";
         }
 
-        // ✅ Handle photo delete
+        // Handle photo delete
         if ($request->delete_photo && $member->photo) {
             Storage::disk('public')->delete($member->photo);
             $credentials['photo'] = null;
         }
 
-        // ✅ Handle photo upload
+        // Handle photo upload
         if ($request->hasFile('photo')) {
-            // Delete old photo if exists
             if ($member->photo) {
                 Storage::disk('public')->delete($member->photo);
             }
@@ -131,6 +138,9 @@ class MemberController extends Controller
         }
 
         $member->update($credentials);
+
+        // Log activity
+        $this->logUpdate($member, $oldValues, "Mengubah data member: {$member->name}");
 
         return redirect()
             ->route('admin.members.index')
@@ -143,7 +153,10 @@ class MemberController extends Controller
             ->where('role', User::ROLES['Member'])
             ->findOrFail($id);
 
-        // ✅ Delete photo when deleting user
+        // Log before delete
+        $this->logDelete($member, "Menghapus member: {$member->name} ({$member->number_type}: {$member->number})");
+
+        // Delete photo when deleting user
         if ($member->photo) {
             Storage::disk('public')->delete($member->photo);
         }

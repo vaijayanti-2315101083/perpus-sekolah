@@ -17,7 +17,9 @@ class IsSuperuser
      */
     public function handle(Request $request, Closure $next)
     {
-        abort_if(!in_array(auth()->user()->role, [User::ROLES['Admin'], User::ROLES['Librarian']]), 404);
+        // Check for Admin role or Librarian/Pustakawan role
+        $allowedRoles = ['Admin', 'Librarian', 'Pustakawan'];
+        abort_if(!in_array(auth()->user()->role, $allowedRoles), 404);
 
         return $next($request);
     }

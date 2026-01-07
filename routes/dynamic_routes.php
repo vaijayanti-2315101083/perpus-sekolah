@@ -55,7 +55,23 @@ $registerAdminRoutes = function ($prefix) {
         Route::resource('/borrows', BorrowController::class)->only(['index', 'edit', 'update', 'destroy']);
 
         // Returns (Restores)
-        Route::resource('/returns', RestoreController::class)->only(['index', 'edit', 'update', 'destroy']);
+        Route::resource('/returns', RestoreController::class)
+            ->only(['index', 'edit', 'update', 'destroy']);
+
+        // 🔥 PEMBAYARAN DENDA (ADMIN & PUSTAKAWAN CUMA LIHAT STATUS)
+        Route::patch('/returns/{id}/pay', [RestoreController::class, 'markAsPaid'])
+            ->name('returns.pay');
+
+        // Activity Logs
+        Route::get('/activity-logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])
+            ->name('activity-logs.index');
+
+        // Reports
+        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])
+            ->name('reports.index');
+        Route::get('/reports/export-pdf', [\App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])
+            ->name('reports.export-pdf');
+    
     });
 };
 

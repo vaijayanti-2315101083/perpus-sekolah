@@ -37,6 +37,28 @@ class DashboardController extends Controller
      */
     protected function adminDashboard()
     {
+        // Chart Data: Monthly Transactions
+        $monthlyData = [];
+        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $year = now()->year;
+        
+        $borrowsByMonth = Borrow::selectRaw('MONTH(borrowed_at) as month, COUNT(*) as total')
+            ->whereYear('borrowed_at', $year)
+            ->groupBy('month')
+            ->pluck('total', 'month');
+        
+        for ($i = 1; $i <= 12; $i++) {
+            $monthlyData[] = $borrowsByMonth->get($i, 0);
+        }
+
+        // Chart Data: Book Categories
+        $categoryData = Book::selectRaw('category, COUNT(*) as total')
+            ->whereNotNull('category')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->limit(6)
+            ->get();
+
         $data = [
             // Books Statistics
             'total_books' => Book::count(),
@@ -60,13 +82,17 @@ class DashboardController extends Controller
             'unpaid_fines' => Restore::where('status', Restore::STATUSES['Fine not paid'])->count(),
             'completed_returns' => Restore::where('status', Restore::STATUSES['Returned'])->count(),
 
+            // Financial
+            'total_fines_collected' => Restore::where('is_paid', true)->sum('fine'),
+            'total_fines_pending' => Restore::where('is_paid', false)->sum('fine'),
+
             // Recent Activities
             'recent_borrows' => Borrow::with(['user', 'book'])
                 ->latest('borrowed_at')
                 ->take(5)
                 ->get(),
             
-            'recent_returns' => Restore::with(['user', 'book'])
+            'recent_returns' => Restore::with(['borrow.user', 'borrow.book'])
                 ->latest('returned_at')
                 ->take(5)
                 ->get(),
@@ -78,6 +104,26 @@ class DashboardController extends Controller
                 ->get(),
             
             'out_of_stock_books' => Book::where('amount', 0)->count(),
+
+            // Chart Data (existing)
+            'chart_months' => $months,
+            'chart_monthly_data' => $monthlyData,
+            'chart_categories' => $categoryData->pluck('category')->toArray(),
+            'chart_category_data' => $categoryData->pluck('total')->toArray(),
+
+            // Chart 3: Return Status Distribution
+            'chart_return_status' => [
+                'labels' => ['Belum Dikonfirmasi', 'Terlambat', 'Denda Belum Dibayar', 'Dikembalikan'],
+                'data' => [
+                    Restore::where('status', Restore::STATUSES['Not confirmed'])->count(),
+                    Restore::where('status', Restore::STATUSES['Past due'])->count(),
+                    Restore::where('status', Restore::STATUSES['Fine not paid'])->count(),
+                    Restore::where('status', Restore::STATUSES['Returned'])->count(),
+                ],
+            ],
+
+            // Chart 4: Monthly Fines Collection
+            'chart_monthly_fines' => $this->getMonthlyFinesData($year, $months),
         ];
 
         return view('admin.dashboard-admin', $data);
@@ -138,5 +184,27 @@ class DashboardController extends Controller
         ];
 
         return view('admin.dashboard-pustakawan', $data);
+    }
+
+    /**
+     * Get monthly fines collection data for chart
+     */
+    protected function getMonthlyFinesData(int $year, array $months): array
+    {
+        $finesByMonth = Restore::selectRaw('MONTH(returned_at) as month, SUM(fine) as total')
+            ->whereYear('returned_at', $year)
+            ->where('is_paid', true)
+            ->groupBy('month')
+            ->pluck('total', 'month');
+
+        $data = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $data[] = (int) $finesByMonth->get($i, 0);
+        }
+
+        return [
+            'labels' => $months,
+            'data' => $data,
+        ];
     }
 }

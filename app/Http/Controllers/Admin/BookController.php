@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Book;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,7 @@ use Illuminate\Validation\Rule;
 
 class BookController extends Controller
 {
+    use LogsActivity;
     public function index(Request $request)
     {
         $books = Book::query();
@@ -55,7 +57,9 @@ class BookController extends Controller
             $book['cover'] = $request->file('cover')->store('covers');
         }
 
-        Book::create($book);
+        $newBook = Book::create($book);
+        
+        $this->logCreate($newBook);
 
         return redirect()
             ->route('admin.books.index')
@@ -89,7 +93,10 @@ class BookController extends Controller
             }
         }
 
+        $oldValues = $book->toArray();
         $book->update($data);
+        
+        $this->logUpdate($book, $oldValues);
 
         return redirect()
             ->route('admin.books.index')
@@ -101,6 +108,8 @@ class BookController extends Controller
         if (isset($book->cover)) {
             Storage::disk('public')->delete($book->cover);
         }
+        
+        $this->logDelete($book);
         
         $book->delete();
 

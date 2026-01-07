@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Restore;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class RestoreController extends Controller
 {
+    use LogsActivity;
+
     public function index(Request $request)
     {
         $restores = Restore::with(['book', 'user']);
@@ -19,60 +21,94 @@ class RestoreController extends Controller
                 $q->whereHas('book', function (Builder $query) use ($request) {
                     $query->where('title', 'LIKE', "%{$request->search}%");
                 })
-                    ->orWhereHas('user', function (Builder $query) use ($request) {
-                        $query->where('name', 'LIKE', "%{$request->search}%");
-                    });
+                ->orWhereHas('user', function (Builder $query) use ($request) {
+                    $query->where('name', 'LIKE', "%{$request->search}%");
+                });
             });
         });
 
-        $restores = $restores->latest('id')->paginate(10);
-
-        return view('admin.returns.index')->with([
-            'restores' => $restores,
+        return view('admin.returns.index', [
+            'restores' => $restores->latest()->paginate(10)
         ]);
     }
 
     public function edit($id)
     {
-        $restore = Restore::query()->findOrFail($id);
-
-        return view('admin.returns.edit')->with([
-            'restore' => $restore,
+        return view('admin.returns.edit', [
+            'restore' => Restore::with(['book', 'user', 'borrow'])->findOrFail($id)
         ]);
     }
 
     public function update(Request $request, $id)
     {
-        $restore = Restore::query()->findOrFail($id);
+        $restore = Restore::with(['borrow', 'book', 'user'])->findOrFail($id);
+        $oldValues = $restore->toArray();
 
-        $data = $request->validate([
-            'confirmation' => ['required', 'boolean'],
-            'fine' => [Rule::when($restore->returned_at > $restore->borrow->borrowed_at->addDays($restore->borrow->duration) && is_null($restore->fine), ['required', 'numeric'])],
-        ]);
+        $dueDate = $restore->borrow->borrowed_at
+            ->addDays($restore->borrow->duration);
 
-        if ($data['confirmation']) {
-            $restore->book()->increment('amount', $restore->borrow->amount);
+        $lateDays = max($dueDate->diffInDays(now(), false), 0);
+        $fine = $lateDays * 5000;
 
-            $data['status'] = Restore::STATUSES['Returned'];
-        } else if (isset($data['fine'])) {
-            $data['status'] = Restore::STATUSES['Fine not paid'];
+        $restore->returned_at = now();
+        $restore->fine = $fine;
+
+        if ($fine > 0) {
+            $restore->status = Restore::STATUSES['Fine not paid'];
+            $restore->virtual_account = 'VA-' . rand(10000000, 99999999);
+            $restore->is_paid = false;
+        } else {
+            $restore->status = Restore::STATUSES['Returned'];
+            $restore->is_paid = true;
+            $restore->book->increment('amount', $restore->borrow->amount);
         }
 
-        $restore->update($data);
+        $restore->save();
 
+        // Log activity
+        $fineInfo = $fine > 0 ? " dengan denda Rp " . number_format($fine, 0, ',', '.') : " tanpa denda";
+        $this->logUpdate($restore, $oldValues, "Memproses pengembalian buku '{$restore->book->title}' oleh {$restore->user->name}{$fineInfo}");
+
+        $prefix = auth()->user()->role === 'Admin' ? 'admin' : 'pustakawan';
         return redirect()
-            ->route('admin.returns.index')
-            ->with('success', 'Berhasil mengubah status konfirmasi pengembalian.');
+            ->route("{$prefix}.returns.index")
+            ->with('success', 'Pengembalian diproses otomatis.');
+    }
+
+    public function markAsPaid($id)
+    {
+        $restore = Restore::with(['borrow', 'book', 'user'])->findOrFail($id);
+        $oldValues = $restore->toArray();
+
+        // jika belum bayar
+        if (!$restore->is_paid) {
+            $restore->is_paid = true;
+            $restore->status = Restore::STATUSES['Returned'];
+
+            // stok buku balik
+            $restore->book->increment('amount', $restore->borrow->amount);
+
+            $restore->save();
+
+            // Log activity
+            $this->logUpdate($restore, $oldValues, "Menerima pembayaran denda Rp " . number_format($restore->fine, 0, ',', '.') . " dari {$restore->user->name} untuk buku '{$restore->book->title}'");
+        }
+
+        $prefix = auth()->user()->role === 'Admin' ? 'admin' : 'pustakawan';
+        return redirect()
+            ->route("{$prefix}.returns.index")
+            ->with('success', 'Denda telah dibayar & buku dikembalikan.');
     }
 
     public function destroy($id)
     {
-        $restore = Restore::query()->findOrFail($id);
+        $restore = Restore::with(['book', 'user'])->findOrFail($id);
+        
+        // Log before delete
+        $this->logDelete($restore, "Menghapus data pengembalian buku '{$restore->book->title}' oleh {$restore->user->name}");
 
         $restore->delete();
 
-        return redirect()
-            ->route('admin.returns.index')
-            ->with('success', 'Berhasil menghapus pengembalian.');
+        return back()->with('success', 'Data pengembalian dihapus.');
     }
 }

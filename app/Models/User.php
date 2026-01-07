@@ -14,7 +14,7 @@ class User extends Authenticatable
     public const ROLES = [
         'Admin' => 'Admin',
         'Librarian' => 'Pustakawan',
-        'Member' => 'Member',
+        'Member' => 'member',
     ];
 
     public const NUMBER_TYPES = [

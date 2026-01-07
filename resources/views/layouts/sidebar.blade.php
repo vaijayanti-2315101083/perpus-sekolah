@@ -61,6 +61,27 @@
         </a>
     </li>
 
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+
+    <!-- Reports (Admin & Pustakawan) -->
+    <li class="nav-item {{ is_current_role_route('reports.*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ dynamic_route('reports.index') }}">
+            <i class="fas fa-fw fa-chart-line"></i>
+            <span>Laporan</span>
+        </a>
+    </li>
+
+    @if (auth()->user()->role === \App\Models\User::ROLES['Admin'])
+        <!-- Activity Logs (Admin Only) -->
+        <li class="nav-item {{ is_current_role_route('activity-logs.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ dynamic_route('activity-logs.index') }}">
+                <i class="fas fa-fw fa-history"></i>
+                <span>Log Aktivitas</span>
+            </a>
+        </li>
+    @endif
+
     <!-- Sidebar Toggler -->
     <div class="mt-5 text-center d-none d-md-inline">
         <button class="rounded-circle border-0" id="sidebarToggle"></button>

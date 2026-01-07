@@ -33,19 +33,19 @@
                                 <td>
                                     @switch($restore->status)
                                         @case(\App\Models\Restore::STATUSES['Returned'])
-                                            <span class="badge badge-success">{{ $restore->status }}</span>    
+                                            <span class="badge badge-success">{{ $restore->status_label }}</span>    
                                         @break
                                     
                                         @case(\App\Models\Restore::STATUSES['Not confirmed'])
-                                            <span class="badge badge-warning">{{ $restore->status }}</span>
+                                            <span class="badge badge-warning">{{ $restore->status_label }}</span>
                                         @break
 
                                         @case(\App\Models\Restore::STATUSES['Past due'])
-                                            <span class="badge badge-danger">{{ $restore->status }}</span>
+                                            <span class="badge badge-danger">{{ $restore->status_label }}</span>
                                         @break
 
                                         @case(\App\Models\Restore::STATUSES['Fine not paid'])
-                                            <span class="badge badge-dark">{{ $restore->status }}</span>
+                                            <span class="badge badge-dark">{{ $restore->status_label }}</span>
                                         @break
                                     @endswitch
                                 </td>

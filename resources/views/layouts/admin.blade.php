@@ -26,6 +26,9 @@
 
     <!-- Custom scripts for all pages-->
     <script defer src="{{ asset('assets/js/sb-admin-2.min.js') }}"></script>
+    
+    <!-- Chart.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body id="page-top">
